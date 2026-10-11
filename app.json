@@ -2,6 +2,7 @@
   "expo": {
     "name": "GuitarLoop",
     "slug": "guitarloop-mobile",
+    "owner": "josejmorillo",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -12,6 +13,7 @@
     },
     "android": {
       "package": "com.josejmorillo.guitarloop",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -39,6 +41,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8db2151e-e3ca-4a95-b821-45724cb8f2a7"
+      }
     }
   }
 }
