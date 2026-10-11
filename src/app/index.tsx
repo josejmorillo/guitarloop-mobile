@@ -1,98 +1,78 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Stack, useRouter } from 'expo-router';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { api } from '@/api/client';
+import type { Collection } from '@/api/types';
+import { EmptyView, ErrorView, Loading, PrimaryButton, Row } from '@/components/ui';
+import { useApiData } from '@/hooks/useApiData';
+import { useSettings } from '@/store/settings';
+import { palette } from '@/theme';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+export default function CollectionsScreen() {
+  const router = useRouter();
+  const serverUrl = useSettings((state) => state.serverUrl);
+  const { data, error, loading, reload } = useApiData<Collection[]>(
+    () => api.collections(),
+    [serverUrl],
+  );
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
+  if (!serverUrl) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <View style={styles.center}>
+        <Text style={styles.title}>Sin servidor configurado</Text>
+        <Text style={styles.dim}>Indica la dirección del GL Server para empezar.</Text>
+        <PrimaryButton label="Abrir ajustes" onPress={() => router.push('/settings')} />
+      </View>
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
-
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+    <View style={styles.flex}>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable hitSlop={12} onPress={() => router.push('/settings')}>
+              <Text style={styles.headerButton}>Ajustes</Text>
+            </Pressable>
+          ),
+        }}
+      />
+      {loading ? (
+        <Loading />
+      ) : error ? (
+        <ErrorView message={error} onRetry={reload} />
+      ) : (
+        <FlatList
+          data={data ?? []}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={
+            <EmptyView message="Sin colecciones todavía. Envía clips desde el escritorio." />
+          }
+          renderItem={({ item }) => (
+            <Row
+              title={item.name}
+              onPress={() =>
+                router.push({ pathname: '/collection/[id]', params: { id: item.id, name: item.name } })
+              }
+            />
+          )}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: { flex: 1 },
+  center: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    padding: 32,
+    gap: 12,
   },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  title: { color: palette.text, fontSize: 18, fontWeight: '700' },
+  dim: { color: palette.textDim, textAlign: 'center' },
+  list: { padding: 16 },
+  headerButton: { color: palette.accent, fontSize: 16 },
 });
