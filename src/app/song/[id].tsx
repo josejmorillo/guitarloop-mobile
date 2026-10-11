@@ -2,7 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { api } from '@/api/client';
 import type { Clip } from '@/api/types';
-import { EmptyView, ErrorView, Loading, Row } from '@/components/ui';
+import { confirmDelete, EmptyView, ErrorView, Loading, Row, showError } from '@/components/ui';
 import { useApiData } from '@/hooks/useApiData';
 
 export default function SongScreen() {
@@ -28,6 +28,16 @@ export default function SongScreen() {
             <Row
               title={item.name}
               subtitle={item.suggested_speed ? `${item.suggested_speed}x sugerido` : undefined}
+              onDelete={() =>
+                confirmDelete(`¿Borrar el clip "${item.name}"?`, async () => {
+                  try {
+                    await api.deleteClip(item.id);
+                    reload();
+                  } catch (error) {
+                    showError(error);
+                  }
+                })
+              }
               onPress={() =>
                 router.push({
                   pathname: '/player/[id]',

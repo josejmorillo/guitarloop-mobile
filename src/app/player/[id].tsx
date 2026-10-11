@@ -1,10 +1,11 @@
-import { useEvent } from 'expo';
+import { useEvent, useEventListener } from 'expo';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { api, streamUrl } from '@/api/client';
 import type { Clip } from '@/api/types';
+import { showError } from '@/components/ui';
 import { useApiData } from '@/hooks/useApiData';
 import { DEFAULT_SPEED_INDEX, formatSpeed, nearestSpeedIndex, palette, SPEEDS } from '@/theme';
 
@@ -17,6 +18,7 @@ export default function PlayerScreen() {
   const [speedIndex, setSpeedIndex] = useState(DEFAULT_SPEED_INDEX);
   const [loop, setLoop] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [ended, setEnded] = useState(false);
   // Evita reaplicar la velocidad sugerida tras un cambio manual.
   const appliedSuggested = useRef(false);
 
@@ -42,6 +44,16 @@ export default function PlayerScreen() {
 
   const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
 
+  // Con el loop desactivado, al terminar el vídeo queda bloqueado: marcamos `ended`
+  // para poder reiniciarlo con un toque.
+  useEventListener(player, 'playToEnd', () => {
+    if (!player.loop) setEnded(true);
+  });
+
+  useEffect(() => {
+    if (isPlaying) setEnded(false);
+  }, [isPlaying]);
+
   // Al cargar el clip, aplica su velocidad sugerida (una sola vez por clip).
   useEffect(() => {
     if (appliedSuggested.current) return;
@@ -54,6 +66,12 @@ export default function PlayerScreen() {
   }, [currentClip, player]);
 
   const togglePlay = () => {
+    if (ended) {
+      player.currentTime = 0;
+      setEnded(false);
+      player.play();
+      return;
+    }
     if (isPlaying) {
       player.pause();
     } else {
@@ -75,9 +93,28 @@ export default function PlayerScreen() {
 
   const selectClip = (clip: Clip) => {
     appliedSuggested.current = false;
+    setEnded(false);
     setClipId(clip.id);
     setMenuOpen(false);
   };
+
+  const handleDeleteClip = useCallback(() => {
+    Alert.alert('Borrar clip', `¿Seguro que quieres borrar "${currentClip?.name ?? 'este clip'}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Borrar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.deleteClip(clipId);
+            router.back();
+          } catch (error) {
+            showError(error);
+          }
+        },
+      },
+    ]);
+  }, [clipId, currentClip, router]);
 
   return (
     <View style={styles.root}>
@@ -100,7 +137,9 @@ export default function PlayerScreen() {
         <Text numberOfLines={1} style={styles.title}>
           {currentClip?.name ?? params.name ?? 'Clip'}
         </Text>
-        <View style={styles.iconButton} />
+        <Pressable hitSlop={12} style={styles.iconButton} onPress={handleDeleteClip}>
+          <Text style={styles.trashText}>🗑</Text>
+        </Pressable>
       </View>
 
       <View style={styles.controls}>
@@ -118,6 +157,13 @@ export default function PlayerScreen() {
           <Text style={styles.controlText}>☰</Text>
         </Pressable>
       </View>
+
+      {ended && (
+        <View style={styles.replay}>
+          <Text style={styles.replayIcon}>▶</Text>
+          <Text style={styles.replayText}>Toca para repetir</Text>
+        </View>
+      )}
 
       <Modal
         visible={menuOpen}
@@ -217,4 +263,18 @@ const styles = StyleSheet.create({
   sheetRowActive: { backgroundColor: 'rgba(76,154,255,0.2)' },
   sheetText: { color: palette.text, fontSize: 16 },
   dim: { color: palette.textDim },
+  trashText: { fontSize: 18 },
+  replay: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '42%',
+    alignItems: 'center',
+    pointerEvents: 'none',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: 16,
+  },
+  replayIcon: { color: '#fff', fontSize: 40 },
+  replayText: { color: '#fff', fontSize: 13, marginTop: 4 },
 });

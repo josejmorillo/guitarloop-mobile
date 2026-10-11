@@ -41,6 +41,10 @@ export const api = {
   songs: (collectionId: string) => request<Song[]>(`/collections/${collectionId}/songs`),
   clips: (songId: string) => request<Clip[]>(`/songs/${songId}/clips`),
   clip: (clipId: string) => request<Clip>(`/clips/${clipId}`),
+  deleteCollection: (id: string) =>
+    request<void>(`/collections/${id}`, { method: 'DELETE' }),
+  deleteSong: (id: string) => request<void>(`/songs/${id}`, { method: 'DELETE' }),
+  deleteClip: (id: string) => request<void>(`/clips/${id}`, { method: 'DELETE' }),
 };
 
 export function streamUrl(clipId: string): string {

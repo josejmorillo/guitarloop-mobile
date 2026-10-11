@@ -1,8 +1,8 @@
 import { Stack, useRouter } from 'expo-router';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { api } from '@/api/client';
 import type { Collection } from '@/api/types';
-import { EmptyView, ErrorView, Loading, PrimaryButton, Row } from '@/components/ui';
+import { confirmDelete, EmptyView, ErrorView, Loading, PrimaryButton, Row, showError } from '@/components/ui';
 import { useApiData } from '@/hooks/useApiData';
 import { useSettings } from '@/store/settings';
 import { palette } from '@/theme';
@@ -51,6 +51,16 @@ export default function CollectionsScreen() {
           renderItem={({ item }) => (
             <Row
               title={item.name}
+              onDelete={() =>
+                confirmDelete(`¿Borrar la colección "${item.name}" y todos sus clips?`, async () => {
+                  try {
+                    await api.deleteCollection(item.id);
+                    reload();
+                  } catch (error) {
+                    showError(error);
+                  }
+                })
+              }
               onPress={() =>
                 router.push({ pathname: '/collection/[id]', params: { id: item.id, name: item.name } })
               }

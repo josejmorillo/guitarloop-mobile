@@ -1,5 +1,17 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { palette } from '@/theme';
+
+/** Muestra un pop up de confirmación antes de borrar. */
+export function confirmDelete(message: string, onConfirm: () => void) {
+  Alert.alert('Borrar', message, [
+    { text: 'Cancelar', style: 'cancel' },
+    { text: 'Borrar', style: 'destructive', onPress: onConfirm },
+  ]);
+}
+
+export function showError(error: unknown) {
+  Alert.alert('Error', error instanceof Error ? error.message : 'Algo ha fallado');
+}
 
 export function Loading() {
   return (
@@ -43,10 +55,12 @@ export function Row({
   title,
   subtitle,
   onPress,
+  onDelete,
 }: {
   title: string;
   subtitle?: string;
   onPress: () => void;
+  onDelete?: () => void;
 }) {
   return (
     <Pressable style={({ pressed }) => [styles.row, pressed && styles.rowPressed]} onPress={onPress}>
@@ -60,6 +74,11 @@ export function Row({
           </Text>
         ) : null}
       </View>
+      {onDelete ? (
+        <Pressable hitSlop={12} style={styles.deleteButton} onPress={onDelete}>
+          <Text style={styles.deleteIcon}>🗑</Text>
+        </Pressable>
+      ) : null}
       <Text style={styles.chevron}>›</Text>
     </Pressable>
   );
@@ -124,5 +143,13 @@ const styles = StyleSheet.create({
     color: palette.textDim,
     fontSize: 22,
     marginLeft: 8,
+  },
+  deleteButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 4,
+  },
+  deleteIcon: {
+    fontSize: 17,
   },
 });

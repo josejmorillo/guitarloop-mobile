@@ -2,7 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { api } from '@/api/client';
 import type { Song } from '@/api/types';
-import { EmptyView, ErrorView, Loading, Row } from '@/components/ui';
+import { confirmDelete, EmptyView, ErrorView, Loading, Row, showError } from '@/components/ui';
 import { useApiData } from '@/hooks/useApiData';
 
 export default function CollectionScreen() {
@@ -27,6 +27,16 @@ export default function CollectionScreen() {
           renderItem={({ item }) => (
             <Row
               title={item.name}
+              onDelete={() =>
+                confirmDelete(`¿Borrar el tema "${item.name}" y todos sus clips?`, async () => {
+                  try {
+                    await api.deleteSong(item.id);
+                    reload();
+                  } catch (error) {
+                    showError(error);
+                  }
+                })
+              }
               onPress={() =>
                 router.push({ pathname: '/song/[id]', params: { id: item.id, name: item.name } })
               }
